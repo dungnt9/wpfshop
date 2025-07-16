@@ -1,34 +1,31 @@
 ﻿using System.Collections.ObjectModel;
 using System.Windows.Input;
-using Prism.Commands;
-using Prism.Mvvm;
-using Prism.Services.Dialogs;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using WpfShop.Core.Models;
 using WpfShop.Core.Services;
+using WpfShop.Core;
 
 namespace WpfShop.Modules.MainAppModule.ViewModels
 {
-    public class ProductsViewModel : BindableBase
+    public class ProductsViewModel : INotifyPropertyChanged
     {
         private readonly IApiService _apiService;
-        private readonly IDialogService _dialogService;
-        
-        private ObservableCollection<Product> _products;
-        private Product _selectedProduct;
+        private ObservableCollection<Product> _products = new();
+        private Product? _selectedProduct;
         private bool _isLoading;
 
-        public ProductsViewModel(IApiService apiService, IDialogService dialogService)
+        // Constructor chỉ có 1 parameter
+        public ProductsViewModel(IApiService apiService)
         {
             _apiService = apiService;
-            _dialogService = dialogService;
-            
             Products = new ObservableCollection<Product>();
             
             // Initialize commands
-            LoadProductsCommand = new DelegateCommand(async () => await LoadProductsAsync());
-            AddProductCommand = new DelegateCommand(AddProduct);
-            EditProductCommand = new DelegateCommand<Product>(EditProduct);
-            DeleteProductCommand = new DelegateCommand<Product>(DeleteProduct);
+            LoadProductsCommand = new RelayCommand(async () => await LoadProductsAsync());
+            AddProductCommand = new RelayCommand(AddProduct);
+            EditProductCommand = new RelayCommand<Product>(EditProduct);
+            DeleteProductCommand = new RelayCommand<Product>(DeleteProduct);
             
             // Load initial data
             _ = LoadProductsAsync();
@@ -37,25 +34,44 @@ namespace WpfShop.Modules.MainAppModule.ViewModels
         public ObservableCollection<Product> Products
         {
             get => _products;
-            set => SetProperty(ref _products, value);
+            set
+            {
+                _products = value;
+                OnPropertyChanged();
+            }
         }
 
-        public Product SelectedProduct
+        public Product? SelectedProduct
         {
             get => _selectedProduct;
-            set => SetProperty(ref _selectedProduct, value);
+            set
+            {
+                _selectedProduct = value;
+                OnPropertyChanged();
+            }
         }
 
         public bool IsLoading
         {
             get => _isLoading;
-            set => SetProperty(ref _isLoading, value);
+            set
+            {
+                _isLoading = value;
+                OnPropertyChanged();
+            }
         }
 
         public ICommand LoadProductsCommand { get; }
         public ICommand AddProductCommand { get; }
         public ICommand EditProductCommand { get; }
         public ICommand DeleteProductCommand { get; }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
 
         private async Task LoadProductsAsync()
         {
@@ -72,8 +88,8 @@ namespace WpfShop.Modules.MainAppModule.ViewModels
             }
             catch (Exception ex)
             {
-                // Show error dialog
-                ShowErrorDialog($"Error loading products: {ex.Message}");
+                // Simple error handling - no dialog service
+                Console.WriteLine($"Error loading products: {ex.Message}");
             }
             finally
             {
@@ -83,112 +99,31 @@ namespace WpfShop.Modules.MainAppModule.ViewModels
 
         private void AddProduct()
         {
-            var parameters = new DialogParameters();
-            parameters.Add("Title", "Add New Product");
-            parameters.Add("Product", new Product());
-            
-            _dialogService.ShowDialog("ProductDialog", parameters, async result =>
+            // Simple implementation - add sample product
+            var newProduct = new Product
             {
-                if (result.Result == ButtonResult.OK)
-                {
-                    var product = result.Parameters.GetValue<Product>("Product");
-                    await SaveProductAsync(product);
-                }
-            });
-        }
-
-        private void EditProduct(Product product)
-        {
-            if (product == null) return;
-            
-            var parameters = new DialogParameters();
-            parameters.Add("Title", "Edit Product");
-            parameters.Add("Product", CloneProduct(product));
-            
-            _dialogService.ShowDialog("ProductDialog", parameters, async result =>
-            {
-                if (result.Result == ButtonResult.OK)
-                {
-                    var editedProduct = result.Parameters.GetValue<Product>("Product");
-                    await SaveProductAsync(editedProduct);
-                }
-            });
-        }
-
-        private async void DeleteProduct(Product product)
-        {
-            if (product == null) return;
-            
-            var parameters = new DialogParameters();
-            parameters.Add("Title", "Confirm Delete");
-            parameters.Add("Message", $"Are you sure you want to delete '{product.Name}'?");
-            
-            _dialogService.ShowDialog("ConfirmDialog", parameters, result =>
-            {
-                if (result.Result == ButtonResult.OK)
-                {
-                    // In a real app, you would call delete API
-                    Products.Remove(product);
-                }
-            });
-        }
-
-        private async Task SaveProductAsync(Product product)
-        {
-            try
-            {
-                IsLoading = true;
-                
-                if (product.Id == 0)
-                {
-                    // Create new product
-                    var newProduct = await _apiService.CreateProductAsync(product);
-                    Products.Add(newProduct);
-                }
-                else
-                {
-                    // Update existing product (would need PUT endpoint)
-                    var existingProduct = Products.FirstOrDefault(p => p.Id == product.Id);
-                    if (existingProduct != null)
-                    {
-                        existingProduct.Name = product.Name;
-                        existingProduct.Brand = product.Brand;
-                        existingProduct.Price = product.Price;
-                        existingProduct.Description = product.Description;
-                        existingProduct.Stock = product.Stock;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                ShowErrorDialog($"Error saving product: {ex.Message}");
-            }
-            finally
-            {
-                IsLoading = false;
-            }
-        }
-
-        private Product CloneProduct(Product product)
-        {
-            return new Product
-            {
-                Id = product.Id,
-                Name = product.Name,
-                Brand = product.Brand,
-                Price = product.Price,
-                Description = product.Description,
-                Stock = product.Stock
+                Name = "New Product",
+                Brand = "Sample Brand",
+                Price = 100,
+                Description = "Sample Description",
+                Stock = 10
             };
+            Products.Add(newProduct);
         }
 
-        private void ShowErrorDialog(string message)
+        private void EditProduct(Product? product)
         {
-            var parameters = new DialogParameters();
-            parameters.Add("Title", "Error");
-            parameters.Add("Message", message);
-            
-            _dialogService.ShowDialog("MessageDialog", parameters, null);
+            if (product == null) return;
+            // Simple implementation - in real app would show edit dialog
+            product.Name = product.Name + " (Edited)";
+        }
+
+        private void DeleteProduct(Product? product)
+        {
+            if (product != null)
+            {
+                Products.Remove(product);
+            }
         }
     }
 }
