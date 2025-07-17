@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using WpfShop.Core.Models;
 using WpfShop.Core.Services;
 using WpfShop.Core;
+using WpfShop.Views;
 
 namespace WpfShop.Modules.MainAppModule.ViewModels
 {
@@ -99,28 +100,44 @@ namespace WpfShop.Modules.MainAppModule.ViewModels
 
         private void AddProduct()
         {
-            // Simple implementation - add sample product
-            var newProduct = new Product
+            var dialog = new ProductDialog("Add New Product");
+            if (dialog.ShowDialog() == true && dialog.Result != null)
             {
-                Name = "New Product",
-                Brand = "Sample Brand",
-                Price = 100,
-                Description = "Sample Description",
-                Stock = 10
-            };
-            Products.Add(newProduct);
+                Products.Add(dialog.Result);
+            }
         }
 
         private void EditProduct(Product? product)
         {
             if (product == null) return;
-            // Simple implementation - in real app would show edit dialog
-            product.Name = product.Name + " (Edited)";
+            
+            var clonedProduct = new Product
+            {
+                Id = product.Id,
+                Name = product.Name,
+                Brand = product.Brand,
+                Price = product.Price,
+                Description = product.Description,
+                Stock = product.Stock
+            };
+            
+            var dialog = new ProductDialog("Edit Product", clonedProduct);
+            if (dialog.ShowDialog() == true && dialog.Result != null)
+            {
+                product.Name = dialog.Result.Name;
+                product.Brand = dialog.Result.Brand;
+                product.Price = dialog.Result.Price;
+                product.Description = dialog.Result.Description;
+                product.Stock = dialog.Result.Stock;
+            }
         }
 
         private void DeleteProduct(Product? product)
         {
-            if (product != null)
+            if (product == null) return;
+            
+            var dialog = new ConfirmDialog($"Are you sure you want to delete '{product.Name}'?");
+            if (dialog.ShowDialog() == true)
             {
                 Products.Remove(product);
             }

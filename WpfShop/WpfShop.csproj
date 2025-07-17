@@ -22,4 +22,17 @@
       <Folder Include="Shared\Components\Layouts\" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Page Update="Views\ConfirmDialog.xaml">
+        <Generator>MSBuild:Compile</Generator>
+        <XamlRuntime>Wpf</XamlRuntime>
+        <SubType>Designer</SubType>
+      </Page>
+      <Page Update="Views\ProductDialog.xaml">
+        <Generator>MSBuild:Compile</Generator>
+        <XamlRuntime>Wpf</XamlRuntime>
+        <SubType>Designer</SubType>
+      </Page>
+    </ItemGroup>
+
 </Project>
